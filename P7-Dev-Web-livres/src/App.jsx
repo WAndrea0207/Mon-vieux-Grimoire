@@ -20,6 +20,14 @@ function App() {
   useEffect(() => {
     setUser(connectedUser);
   }, [connectedUser]);
+
+  useEffect(() => {
+    fetch('http://localhost:3000/api/test')
+      .then(res => res.json())
+      .then(data => console.log('Réponse du serveur :', data))
+      .catch(err => console.error('Erreur:', err));
+  }, []);
+
   return (
     <BrowserRouter>
       <div>
