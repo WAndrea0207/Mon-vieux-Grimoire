@@ -1,18 +1,14 @@
 const express = require('express');
+const auth = require('../middleware/auth');
 const router = express.Router();
+
 
 const bookController = require('../controllers/bookController');
 
-// Route de test
-router.get('/test', (req, res) => {
-  res.json({ message: 'Serveur connecté !' });
-});
-
 // Routes CRUD
-router.get('/books', bookController.getAllBooks);
-router.get('/books/:id', bookController.getOneBook);
-router.post('/books', bookController.createBook);
-router.put('/books/:id', bookController.updateBook);
-router.delete('/books/:id', bookController.deleteBook);
-
+router.get('/', auth, bookController.getAllBooks);
+router.get('/:id', auth, bookController.getOneBook);
+router.post('/', auth, bookController.createBook);
+router.put('/:id', auth, bookController.updateBook);
+router.delete('/:id', auth, bookController.deleteBook);
 module.exports = router;
