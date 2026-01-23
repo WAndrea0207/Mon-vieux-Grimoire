@@ -16,8 +16,20 @@ exports.getOneBook = (req, res) => {
 
 // POST - Créer un livre
 exports.createBook = (req, res) => {
-  delete req.body._id;
-  const book = new Book({ ...req.body });
+  // Récupère les données du livre envoyées en form-data (c'est une string)
+  const bookObject = JSON.parse(req.body.book);
+  
+  // Ne pas faire confiance aux données du client
+  delete bookObject._id;
+  delete bookObject.userId;
+  
+  // Crée le livre avec les vraies données
+  const book = new Book({
+    ...bookObject,
+    userId: req.auth.userId,  // ← Le vrai userId du token
+    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}` // ← URL complète de l'image
+  });
+  
   book.save()
     .then(() => res.status(201).json({ message: 'Livre créé !' }))
     .catch(error => res.status(400).json({ error }));
