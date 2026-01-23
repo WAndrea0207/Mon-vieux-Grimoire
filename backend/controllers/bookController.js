@@ -1,3 +1,4 @@
+const fs = require('fs');
 const Book = require('../models/book');
 
 // GET - Récupérer tous les livres
@@ -37,14 +38,56 @@ exports.createBook = (req, res) => {
 
 // PUT - Modifier un livre
 exports.updateBook = (req, res) => {
-  Book.updateOne({ _id: req.params.id }, { ...req.body, _id: req.params.id })
-    .then(() => res.status(200).json({ message: 'Livre modifié !' }))
-    .catch(error => res.status(400).json({ error }));
+  // Regarde s'il y a une nouvelle image ou pas
+  const bookObject = req.file ? {
+    ...JSON.parse(req.body.book),
+    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+  } : { ...req.body };
+  
+  // Ne pas faire confiance au userId du client
+  delete bookObject._id;
+  delete bookObject.userId;
+  
+  // Vérifie que c'est bien le propriétaire du livre
+  Book.findOne({ _id: req.params.id })
+    .then((book) => {
+      if (book.userId !== req.auth.userId) {
+        res.status(401).json({ message: 'Non autorisé' });
+      } else {
+        Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
+          .then(() => res.status(200).json({ message: 'Livre modifié !' }))
+          .catch(error => res.status(400).json({ error }));
+      }
+    })
+    .catch((error) => {
+      res.status(400).json({ error });
+    });
 };
 
 // DELETE - Supprimer un livre
 exports.deleteBook = (req, res) => {
-  Book.deleteOne({ _id: req.params.id })
-    .then(() => res.status(200).json({ message: 'Livre supprimé !' }))
-    .catch(error => res.status(400).json({ error }));
+  // Étape 1 : Récupère le livre
+  Book.findOne({ _id: req.params.id })
+    .then((book) => {
+      // Étape 2 : Vérifie que c'est le propriétaire
+      if (book.userId !== req.auth.userId) {
+        res.status(401).json({ message: 'Non autorisé' });
+      } else {
+        // Étape 3 : Extrait le nom du fichier de l'URL
+        // Exemple : http://localhost:4000/images/book123.jpg
+        // → Récupère : book123.jpg
+        const filename = book.imageUrl.split('/images/')[1];
+        
+        // Étape 4 : Supprime le fichier du serveur
+        fs.unlink(`images/${filename}`, () => {
+          // Étape 5 : Une fois l'image supprimée, supprime le livre de MongoDB
+          Book.deleteOne({ _id: req.params.id })
+            .then(() => res.status(200).json({ message: 'Livre supprimé !' }))
+            .catch(error => res.status(400).json({ error }));
+        });
+      }
+    })
+    .catch((error) => {
+      res.status(500).json({ error });
+    });
 };
