@@ -28,7 +28,7 @@ const optimizeImage = (req, res, next) => {
 
   // Optimisation avec Sharp
   sharp(req.file.buffer)
-    .resize({ width: 463, height: 595, fit: 'cover' })  // Redimensionne au format livre
+    .resize({ width: 463, height: 595, fit: 'inside' })  // Redimensionne au format livre
     .jpeg({ quality: 80 })  // Compresse en JPEG qualité 80%
     .toFile(filepath)
     .then(() => {
