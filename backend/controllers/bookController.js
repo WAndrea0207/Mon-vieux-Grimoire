@@ -17,18 +17,16 @@ exports.getOneBook = (req, res) => {
 
 // POST - Créer un livre
 exports.createBook = (req, res) => {
-  // Récupère les données du livre envoyées en form-data (c'est une string)
   const bookObject = JSON.parse(req.body.book);
-  
-  // Ne pas faire confiance aux données du client
   delete bookObject._id;
   delete bookObject.userId;
   
-  // Crée le livre avec les vraies données
   const book = new Book({
     ...bookObject,
-    userId: req.auth.userId,  // ← Le vrai userId du token
-    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}` // ← URL complète de l'image
+    userId: req.auth.userId,
+    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
+    ratings: [],          
+    averageRating: 0      
   });
   
   book.save()
@@ -52,7 +50,7 @@ exports.updateBook = (req, res) => {
   Book.findOne({ _id: req.params.id })
     .then((book) => {
       if (book.userId !== req.auth.userId) {
-        res.status(401).json({ message: 'Non autorisé' });
+        res.status(403).json({ message: 'Non autorisé' });
       } else {
         Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
           .then(() => res.status(200).json({ message: 'Livre modifié !' }))
@@ -71,7 +69,7 @@ exports.deleteBook = (req, res) => {
     .then((book) => {
       // Étape 2 : Vérifie que c'est le propriétaire
       if (book.userId !== req.auth.userId) {
-        res.status(401).json({ message: 'Non autorisé' });
+        res.status(403).json({ message: 'Non autorisé' });
       } else {
         // Étape 3 : Extrait le nom du fichier de l'URL
         // Exemple : http://localhost:4000/images/book123.jpg
@@ -90,4 +88,47 @@ exports.deleteBook = (req, res) => {
     .catch((error) => {
       res.status(500).json({ error });
     });
+};
+
+// POST - Noter un livre
+exports.rateBook = (req, res) => {
+  // Étape 1 : Récupérer userId et rating du body
+  const { userId, rating } = req.body;
+  
+  // Étape 2 : Vérifier que la note est entre 0 et 5
+  if (rating < 0 || rating > 5) {
+    return res.status(400).json({ error: 'La note doit être entre 0 et 5' });
+  }
+  
+  // Étape 3 : Récupérer le livre
+  Book.findOne({ _id: req.params.id })
+    .then((book) => {
+      // Étape 4 : Vérifier que l'utilisateur n'a pas déjà noté ce livre
+      const userAlreadyRated = book.ratings.find(r => r.userId === userId);
+      if (userAlreadyRated) {
+        return res.status(400).json({ error: 'Vous avez déjà noté ce livre' });
+      }
+      
+      // Étape 5 : Ajouter la nouvelle note au tableau ratings
+      book.ratings.push({ userId, grade: rating });
+      
+      // Étape 6 : Calculer la nouvelle moyenne
+      const totalRating = book.ratings.reduce((sum, r) => sum + r.grade, 0);
+      book.averageRating = totalRating / book.ratings.length;
+      
+      // Étape 7 : Sauvegarder et retourner le livre mis à jour
+      book.save()
+        .then(() => res.status(200).json(book))
+        .catch(error => res.status(400).json({ error }));
+    })
+    .catch(error => res.status(404).json({ error }));
+};
+
+// GET - Récupérer les 3 meilleurs livres
+exports.getBestRatedBooks = (req, res) => {
+  Book.find()
+    .sort({ averageRating: -1 })  // Trie par note décroissante
+    .limit(3)                      // Limite à 3 livres
+    .then(books => res.status(200).json(books))
+    .catch(error => res.status(400).json({ error }));
 };
