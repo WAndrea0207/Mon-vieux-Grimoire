@@ -1,14 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const path = require('path');  // ← Ajoute cette importation
-
+const path = require('path');  
 const bookRoutes = require('./routes/bookRoute');
 const userRoutes = require('./routes/userRoute');
 
 const app = express();
 
 // Connexion à MongoDB
-mongoose.connect('mongodb+srv://will:grimoire@cluster0.in5va.mongodb.net/monvieuxgrimoire?appName=Cluster0',)
+mongoose.connect('mongodb+srv://will:grimoire@cluster0.8xmxipj.mongodb.net/monvieuxgrimoire?appName=Cluster0',)
   .then(() => console.log('Connexion à MongoDB réussie !'))
   .catch(() => console.log('Connexion à MongoDB échouée !'));
 
