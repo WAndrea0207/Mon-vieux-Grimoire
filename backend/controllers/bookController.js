@@ -17,15 +17,24 @@ exports.getOneBook = (req, res) => {
 
 // POST - Créer un livre
 exports.createBook = (req, res) => {
+  // Vérifier que l'image existe
+  if (!req.file) {
+    return res.status(400).json({ error: 'Aucune image fournie' });
+  }
+
   const bookObject = JSON.parse(req.body.book);
   delete bookObject._id;
   delete bookObject.userId;
   
+  // Vérifier que tous les champs obligatoires sont remplis
+  if (!bookObject.title || !bookObject.author || !bookObject.genre || !bookObject.year) {
+    return res.status(400).json({ error: 'Tous les champs sont obligatoires' });
+  }
+  
   const book = new Book({
     ...bookObject,
     userId: req.auth.userId,
-    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
-
+    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
   });
   
   book.save()
@@ -90,9 +99,11 @@ exports.deleteBook = (req, res) => {
 };
 
 // POST - Noter un livre
+
+// Étape 1 : Récupérer userId et rating du body
 exports.rateBook = (req, res) => {
-  // Étape 1 : Récupérer userId et rating du body
-  const { userId, rating } = req.body;
+  const { rating } = req.body;
+  const userId = req.auth.userId; 
   
   // Étape 2 : Vérifier que la note est entre 0 et 5
   if (rating < 0 || rating > 5) {
