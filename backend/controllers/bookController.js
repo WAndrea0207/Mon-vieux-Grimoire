@@ -119,12 +119,12 @@ exports.deleteBook = (req, res) => {
 
 // POST - Noter un livre
 exports.rateBook = (req, res) => {
-  const { rating } = req.body;
+  const rating = Number(req.body.rating);
   const userId = req.auth.userId; 
   
-  // Vérifier que la note est entre 1 et 5
-  if (rating < 1 || rating > 5) {
-    return res.status(400).json({ error: 'La note doit être entre 1 et 5' });
+  // Vérifier que la note est entre 0 et 5
+  if (Number.isNaN(rating) || rating < 0 || rating > 5) {
+    return res.status(400).json({ error: 'La note doit être entre 0 et 5' });
   }
   
   // Récupérer le livre
